@@ -4,6 +4,12 @@ on:
   push:
     branches: [ "master" ]
 
+env:
+  CARGO_TERM_COLOR: always
+  CRATE_NAME: asfald
+  RUST_BACKTRACE: 1
+  GITHUB_TOKEN: ${{ github.token }}
+
 jobs:
   release-please:
     runs-on: ubuntu-latest
@@ -14,8 +20,114 @@ jobs:
       packages: write
       pull-requests: write
 
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
         with:
           release-type: rust
+
+  build-release:
+    name: Release - ${{ matrix.platform.name }}
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    strategy:
+      matrix:
+        platform:
+          - os: windows
+            name: windows-x64
+            target: x86_64-pc-windows-msvc
+            runs-on: windows-latest
+            command: build
+            extension: .exe
+          - os: macos
+            name: apple-arm64
+            target: aarch64-apple-darwin
+            runs-on: macos-14
+            command: build
+          - os: macos
+            name: macos-x64
+            target: x86_64-apple-darwin
+            runs-on: macos-14
+            command: build
+          - os: FreeBSD-x86_64
+            name: FreeBSD-x64
+            runs-on: [ubuntu-latest]
+            target: x86_64-unknown-freebsd
+            command: build
+          - os: linux
+            name: linux-x64-musl
+            target: x86_64-unknown-linux-musl
+            runs-on: [ubuntu-latest]
+            command: build
+          # for linux we only build the statically linked executable
+          #- os: linux
+          #  name: linux-x64
+          #  target: x86_64-unknown-linux-gnu
+          #  runs-on: [ ubuntu-latest]
+          #  command: build
+          - os: linux
+            name: linux-arm64-musl
+            target: aarch64-unknown-linux-musl
+            runs-on: [ubuntu-latest]
+            command: build
+          #- os: linux
+          #  name: linux-arm64
+          #  target: aarch64-unknown-linux-gnu
+          #  runs-on: [ubuntu-latest]
+          #  command: build
+          - os: linux
+            name: linux-armv7-musl
+            target: armv7-unknown-linux-musleabi
+            runs-on: [ubuntu-latest]
+            command: build
+          #- os: linux
+          #  name: linux-armv7
+          #  target: armv7-unknown-linux-gnueabi
+          #  runs-on: [ubuntu-latest]
+          #  command: build
+
+    runs-on: ${{ matrix.platform.runs-on }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: ${{ matrix.platform.command }}
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release"
+          strip: true
+      - run: ls target/${{matrix.platform.target}}/release/asfald${{matrix.platform.extension}}
+      - name: Make artifact available
+        uses: actions/upload-artifact@v4
+        with:
+          name: asfald-${{matrix.platform.target}}
+          path: target/${{matrix.platform.target}}/release/asfald${{matrix.platform.extension}}
+
+  make-release:
+    name: Make release
+    runs-on: ubuntu-latest
+    needs: [release-please, build-release]
+    if: success() && ${{ needs.release-please.outputs.release_created == 'true' }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: ./binaries
+      - name: Display structure of downloaded files
+        run: ls -R ./binaries
+      - name: Generate artifacts names
+        run: |
+          cd ./binaries
+          mkdir -p ../artifacts
+          for dir in */; do
+            dir="${dir%/}"
+            mv $dir/asfald{,.exe} ../artifacts/$dir
+          done
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: ./artifacts/*
+          fail_on_unmatched_files: true
+          tag_name: ${{ needs.release-please.outputs.tag_name }}

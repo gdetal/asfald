@@ -45,28 +45,14 @@ jobs:
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
     uses: ./.github/workflows/build.yml
 
-  make-release:
-    name: Make release
+  publish-release:
+    name: Publish release
     runs-on: ubuntu-latest
     needs: [release-please, build-release]
     if: success() && ${{ needs.release-please.outputs.release_created == 'true' }}
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: ./binaries
-      - name: Display structure of downloaded files
-        run: ls -R ./binaries
-      - name: Generate artifacts names
-        run: |
-          cd ./binaries
-          mkdir -p ../artifacts
-          for dir in */; do
-            dir="${dir%/}"
-            mv $dir/asfald{,.exe} ../artifacts/$dir
-          done
       - uses: softprops/action-gh-release@v1
         with:
           draft: false
-          files: ./artifacts/*
-          fail_on_unmatched_files: true
+          fail_on_unmatched_files: false
           tag_name: ${{ needs.release-please.outputs.tag_name }}

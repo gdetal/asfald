@@ -32,7 +32,7 @@ jobs:
   build-release:
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
-    uses: ./.github/workflows/ci.yml
+    uses: ./.github/workflows/build.yml
 
   make-release:
     name: Make release

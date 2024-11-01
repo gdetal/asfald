@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0](https://github.com/gdetal/asfald/compare/v0.2.0...v1.0.0) (2024-11-01)
+
+
+### Miscellaneous Chores
+
+* make debug release ([014aa37](https://github.com/gdetal/asfald/commit/014aa37f2a24d891e6fb28385b9359cd5e17de5b))
+
 ## [0.2.0](https://github.com/asfaload/asfald/compare/v0.1.0...v0.2.0) (2024-10-17)
 
 

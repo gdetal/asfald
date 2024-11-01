@@ -46,6 +46,8 @@ jobs:
           path: artifacts
           pattern: asfald-*
           merge-multiple: true
+      - name: Display structure of downloaded files
+        run: ls -R ./artifacts
       - uses: softprops/action-gh-release@v1
         with:
           draft: false
